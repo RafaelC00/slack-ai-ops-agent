@@ -1,0 +1,30 @@
+# A/B test results — seeded into the `experiments` table.
+# The eval golden set grades answers against these known-good outcomes.
+
+experiments:
+  - id: exp-oct-hero
+    name: "October homepage hero A/B test"
+    winner: "Variant B"
+    lift_pct: 12.0
+    significant: true
+    summary: >
+      Variant B (lifestyle hero + single CTA) beat Variant A (product grid) by
+      12% on homepage→checkout conversion. p=0.03, n=48,000. Shipped Oct 28.
+
+  - id: exp-email-subject
+    name: "Win-back email subject line test"
+    winner: "Variant A"
+    lift_pct: 6.5
+    significant: true
+    summary: >
+      "We saved your favorites" (A) beat "Come back for 15% off" (B) by 6.5% open
+      rate. p=0.04. Used for the Q4 retention send.
+
+  - id: exp-pdp-badge
+    name: "PDP trust-badge placement test"
+    winner: "no difference"
+    lift_pct: 0.4
+    significant: false
+    summary: >
+      Moving the trust badge above the fold showed +0.4% add-to-cart but was not
+      significant (p=0.6). No change shipped.

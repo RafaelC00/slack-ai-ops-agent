@@ -1,0 +1,28 @@
+# Golden set — the questions the agent is graded on.
+# Each case declares what "good" means. Three behaviours we measure:
+#   correctness  — answer contains the known-good fact (expect_contains)
+#   grounded     — the answer rested on a kb_search hit (require_grounded)
+#   refusal      — for out-of-KB questions, the agent declines (expect_refusal)
+
+cases:
+  - id: ab-hero-october
+    question: "Which variant won the October homepage hero A/B test?"
+    expect_contains: "Variant B"      # set from seeded experiment data
+    require_grounded: true
+
+  - id: pixel-purchase-event
+    question: "What event does the checkout pixel fire on purchase?"
+    expect_contains: "purchase"
+    require_grounded: true
+
+  - id: brief-q4-objective
+    question: "What's the primary objective of the Q4 retention campaign?"
+    require_grounded: true
+
+  - id: out-of-kb-revenue
+    question: "What was our Q3 revenue in Brazil?"
+    expect_refusal: true              # no such data in KB → must not invent
+
+  - id: out-of-kb-headcount
+    question: "How many people are on the growth team?"
+    expect_refusal: true
