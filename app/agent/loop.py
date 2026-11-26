@@ -7,9 +7,10 @@ agent did — the observability that makes it trustworthy and demo-able.
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from typing import Any, Awaitable, Callable
+from datetime import UTC, datetime
+from typing import Any
 
 from app.agent.tools import TOOLS, Tool
 
@@ -45,7 +46,7 @@ class RunResult:
 
 
 def _now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 async def run_agent(
@@ -76,15 +77,25 @@ async def run_agent(
         if not tool:
             break
 
-        observation = await tool.run(call.get("input", {}))
-        # Both retrieval tools count as grounding when they return real data.
-        if tool.name in ("kb_search", "experiment_lookup") and observation not in ("NO_RESULTS",):
-            if not observation.startswith("ERROR"):
-                result.grounded = True
+        tool_input = call.get("input") or {}
+        # Robustness: models sometimes fire kb_search with no query at all
+        # (observed with gpt-4o-mini). Fall back to the user's question so a RAG
+        # lookup still happens instead of a spurious NO_RESULTS -> "I don't know".
+        if tool.name == "kb_search" and not any(
+            isinstance(v, str) and v.strip() for v in tool_input.values()
+        ):
+            tool_input = {**tool_input, "query": user_text}
 
-        step = Step(
-            kind="tool", at=_now(), tool=tool.name, input=call.get("input"), output=observation
-        )
+        observation = await tool.run(tool_input)
+        # Both retrieval tools count as grounding when they return real data.
+        if (
+            tool.name in ("kb_search", "experiment_lookup")
+            and observation not in ("NO_RESULTS",)
+            and not observation.startswith("ERROR")
+        ):
+            result.grounded = True
+
+        step = Step(kind="tool", at=_now(), tool=tool.name, input=tool_input, output=observation)
         result.steps.append(step)
         await record(step)
         messages.append({"role": "tool", "name": tool.name, "content": observation})
