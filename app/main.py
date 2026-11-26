@@ -1,8 +1,13 @@
 """FastAPI entrypoint. Slack posts events here.
 
-Slack needs a 200 within 3 seconds, so we verify the signature, answer the
-url_verification handshake, and for real events we ack immediately and run the
-agent in the background, posting the reply in-thread when it's ready.
+We verify the signature, answer the url_verification handshake, and for real
+events run the agent and post the reply before returning.
+
+Why synchronous (not a BackgroundTask): on serverless (Vercel) the function is
+frozen once it returns, so post-response background work isn't reliably executed.
+Processing inline can exceed Slack's 3s window, so Slack will retry — we ignore
+retries (X-Slack-Retry-Num) to avoid duplicate replies, and the first delivery
+does the work.
 """
 
 from __future__ import annotations
@@ -10,7 +15,7 @@ from __future__ import annotations
 import json
 import os
 
-from fastapi import BackgroundTasks, FastAPI, Request, Response
+from fastapi import FastAPI, Request, Response
 from fastapi.responses import HTMLResponse
 
 from app.agent.loop import run_agent
@@ -44,7 +49,7 @@ async def dashboard() -> HTMLResponse:
 
 
 @app.post("/slack/events")
-async def slack_events(request: Request, background: BackgroundTasks) -> Response:
+async def slack_events(request: Request) -> Response:
     raw = await request.body()
 
     if not is_valid_slack_request(
@@ -61,11 +66,16 @@ async def slack_events(request: Request, background: BackgroundTasks) -> Respons
     if payload.get("type") == "url_verification":
         return Response(content=payload["challenge"], media_type="text/plain")
 
+    # We process inline (see module docstring), which can exceed Slack's 3s window,
+    # so Slack retries. Ignore retries so the reply isn't posted more than once.
+    if request.headers.get("x-slack-retry-num"):
+        return Response(status_code=200)
+
     event = payload.get("event", {})
     if event.get("type") in ("app_mention", "message") and not event.get("bot_id"):
-        background.add_task(_handle, event)
+        await _handle(event)
 
-    return Response(status_code=200)  # ack fast; work continues in the background
+    return Response(status_code=200)
 
 
 async def _handle(event: dict) -> None:
