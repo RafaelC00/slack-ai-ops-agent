@@ -142,3 +142,23 @@ def _record_sync(step: "Step") -> None:
 
 async def record_step(step: "Step") -> None:
     await asyncio.to_thread(_record_sync, step)
+
+
+# --- read traces (for /dashboard) --------------------------------------------
+def _recent_steps_sync(limit: int) -> list[dict]:
+    with _connect() as conn, conn.cursor() as cur:
+        cur.execute(
+            "select step_kind, tool, input, output, at from runs order by at desc, id desc limit %s",
+            (limit,),
+        )
+        rows = cur.fetchall()
+    # input is jsonb -> psycopg already returns a Python object.
+    return [
+        {"kind": k, "tool": tool, "input": inp, "output": output, "at": at}
+        for (k, tool, inp, output, at) in rows
+    ]
+
+
+async def recent_steps(limit: int = 100) -> list[dict]:
+    """Most recent trace steps, newest first. Read-only; powers /dashboard."""
+    return await asyncio.to_thread(_recent_steps_sync, limit)

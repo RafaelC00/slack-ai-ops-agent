@@ -1,0 +1,12 @@
+# Keep the serverless bundle small: ship app/ + api/ + requirements only.
+.venv/
+tests/
+evals/
+data/
+scripts/
+.playwright-mcp/
+_dash_preview.html
+*.png
+.pytest_cache/
+.ruff_cache/
+.git/
