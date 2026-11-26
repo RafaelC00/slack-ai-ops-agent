@@ -18,6 +18,7 @@ from app.agent.model import call_model
 from app.config import load_env
 from app.dashboard import render_dashboard
 from app.rag.store import recent_steps, record_step
+from app.slack.post import post_reply
 from app.slack.verify import is_valid_slack_request
 
 # Load .env for local dev. Uses setdefault, so platform-provided env vars
@@ -74,5 +75,4 @@ async def _handle(event: dict) -> None:
 
     result = await run_agent(text, call_model=call_model, record=record_step)
 
-    # TODO: post result.answer to `channel` in `thread_ts` via slack_sdk WebClient.
-    _ = (channel, thread_ts, result)
+    await post_reply(channel=channel, thread_ts=thread_ts, text=result.answer)

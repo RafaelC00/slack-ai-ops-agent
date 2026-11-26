@@ -8,6 +8,8 @@ suite whose numbers are published below.
 > Built to show applied-AI / forward-deployed engineering end to end:
 > retrieval → tool-use → observability → **evaluation** → deployment.
 
+**▶ Live demo:** [run-trace dashboard](https://slack-ai-ops-agent.vercel.app/dashboard) · [health](https://slack-ai-ops-agent.vercel.app/healthz)
+
 ---
 
 ## Why this exists
