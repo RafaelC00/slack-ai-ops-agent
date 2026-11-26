@@ -11,11 +11,18 @@ import json
 import os
 
 from fastapi import BackgroundTasks, FastAPI, Request, Response
+from fastapi.responses import HTMLResponse
 
 from app.agent.loop import run_agent
 from app.agent.model import call_model
-from app.rag.store import record_step
+from app.config import load_env
+from app.dashboard import render_dashboard
+from app.rag.store import recent_steps, record_step
 from app.slack.verify import is_valid_slack_request
+
+# Load .env for local dev. Uses setdefault, so platform-provided env vars
+# (Vercel) always win and this is a no-op in production.
+load_env()
 
 app = FastAPI(title="slack-ai-ops-agent")
 
@@ -23,6 +30,16 @@ app = FastAPI(title="slack-ai-ops-agent")
 @app.get("/healthz")
 def healthz() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/dashboard", response_class=HTMLResponse)
+async def dashboard() -> HTMLResponse:
+    """Read-only trace viewer. Never raises: a DB problem renders an empty state."""
+    try:
+        steps = await recent_steps(limit=100)
+        return HTMLResponse(render_dashboard(steps, db_ok=True))
+    except Exception:  # noqa: BLE001 - a dashboard DB hiccup must render, not 500
+        return HTMLResponse(render_dashboard([], db_ok=False), status_code=200)
 
 
 @app.post("/slack/events")
