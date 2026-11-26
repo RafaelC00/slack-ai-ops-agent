@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "slack-ai-ops-agent"
 version = "0.1.0"
@@ -17,6 +21,11 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["ruff>=0.7", "pytest>=8.3"]
+
+[tool.setuptools]
+# Only the app package ships; evals/ and scripts/ are run as scripts, tests/ is
+# test-only. Explicit list so setuptools doesn't choke on the sibling dirs.
+packages = ["app", "app.agent", "app.rag", "app.slack"]
 
 [tool.ruff]
 line-length = 100
